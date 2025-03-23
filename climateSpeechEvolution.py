@@ -26,10 +26,13 @@ def process(x):
   d = datetime.fromisoformat(x['datetime'])
   y = { 'datetime' : d }
   if kyoto_protocol < d and x['text']:
-    l = climate_regexp.findall(x['title']) + climate_regexp.findall(x['text'])
+    ltitle = climate_regexp.findall(x['title'])
+    l = ltitle + climate_regexp.findall(x['text'])
     x['distr_match'] = { k : l.count(k) for k in set(l) }
-    y['match'] = int(bool(len(l) > 2))
+    y['match_title'] = int(ltitle != [])
+    y['match'] = int(len(l) > 2)
   else:
+    y['match_title'] = 0
     y['match'] = 0
   y['climate_kwd'] = int(match_kwd(x['keywords']))
   return x, y
@@ -61,16 +64,20 @@ quarterly = df.groupby(pd.Grouper(freq="QE")).agg(
   ratio=('match', 'mean'),
   climate=('match','sum'),
   kwd=('climate_kwd','sum'),
+  title=('match_title', 'sum'),
   all=('match', 'count')
   ).reset_index()
 # Remove the first and last quarter that are incomplete
 quarterly.drop([0,quarterly.shape[0] - 1], inplace=True)
 # Change the representation for the climate and all columns to plot on a single figure
-quarterly_sum_all = quarterly.melt(id_vars=['datetime'],value_vars=['climate','kwd', 'all'])
+quarterly_sum_all = quarterly.melt(id_vars=['datetime'],value_vars=['climate','kwd', 'title'])
 
-# Create 2 subplots and plot climate, all on the first, ratio on the second
-fig,axs=plt.subplots(ncols=2)
-sns.lineplot(data=quarterly_sum_all, x='datetime', y='value', hue='variable',ax=axs[0])
-sns.lineplot(data=quarterly, x='datetime', y='ratio',ax=axs[1])
+# # Create 2 subplots and plot climate, all on the first, ratio on the second
+# fig,axs=plt.subplots(ncols=2)
+# sns.lineplot(data=quarterly_sum_all, x='datetime', y='value', hue='variable',ax=axs[0])
+# sns.lineplot(data=quarterly, x='datetime', y='ratio',ax=axs[1])
+
+sns.lineplot(data=quarterly_sum_all, x='datetime', y='value', hue='variable')
+
 # Do not forget to show the underlying matplotlib.pyplot buffer !!
 plt.show()
