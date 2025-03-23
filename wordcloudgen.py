@@ -6,6 +6,7 @@ import numpy as np
 from  wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import itertools
+import nltk
 
 with open('freqwordlist.txt') as f:
   freqreg = re.compile(f.read(), re.I)
@@ -13,16 +14,8 @@ with open('freqwordlist.txt') as f:
 wordreg = re.compile(r"\w+")
 
 def getFrequencyDictForText(sentence):
-  freqs = {}
-
-  # making dict for counting frequencies
-  for match in wordreg.finditer(sentence):
-    text = match.group().lower()
-    if freqreg.fullmatch(text) or len(text) < 5:
-      continue
-    val = freqs.get(text, 0)
-    freqs[text] =  val + 1
-  return freqs
+  words = map(lambda m: m.group().lower(), wordreg.finditer(sentence))
+  return nltk.FreqDist(w for w in words if len(w) > 4 and not freqreg.fullmatch(w))
 
 
 def makeImage(filename, text):
