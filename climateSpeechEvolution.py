@@ -37,10 +37,10 @@ def process(x):
   y['climate_kwd'] = int(match_kwd(x['keywords']))
   return x, y
 
-cutoff = datetime(2003,12,12, tzinfo=timezone.utc)
+# cutoff = datetime(2000,12,12, tzinfo=timezone.utc)
 
 # Apply the process function to all data, filter out entries before Kyoto's protocol
-speechs_after_kyoto = (x for x in map(process, speechs) if kyoto_protocol < x[1]['datetime'] ) #< cutoff)
+speechs_after_kyoto = (x for x in map(process, speechs) if kyoto_protocol < x[1]['datetime'] ) # < cutoff)
 
 # If we want to check the articles tagged Climat that we did not keep
 # l = list(x[0] for x in speechs_after_kyoto if not match_kwd(x[0]['keywords']) and x[1]['match'])
@@ -52,32 +52,37 @@ speechs_after_kyoto = (x for x in map(process, speechs) if kyoto_protocol < x[1]
 speechs_after_kyoto1, speechs_after_kyoto2 = tee(speechs_after_kyoto)
 
 # Save the entries that refers to climate
-with open("climate.json", "w") as f:
-  json.dump(list(x[0] for x in speechs_after_kyoto1 if x[1]['match']), f, ensure_ascii=False,indent=2)
+# with open("climate.json", "w") as f:
+#   json.dump(list(x[0] for x in speechs_after_kyoto1 if x[1]['match']), f, ensure_ascii=False,indent=2)
 
 # Transform to a panda dataframe removing all fields but 'match'
 df = pd.DataFrame.from_records((x[1] for x in speechs_after_kyoto2), index=['datetime'])
 
-# Group the data per quarter
-quarterly = df.groupby(pd.Grouper(freq="QE")).agg(
-  # creates 3 new columns ratio, climate and all from the matches
+# Group the data per week
+weekly = df.groupby(pd.Grouper(freq="W")).agg(
+  # creates new columns ratio, climate, kwd, title and all from the matches
   ratio=('match', 'mean'),
   climate=('match','sum'),
   kwd=('climate_kwd','sum'),
   title=('match_title', 'sum'),
   all=('match', 'count')
-  ).reset_index()
-# Remove the first and last quarter that are incomplete
-quarterly.drop([0,quarterly.shape[0] - 1], inplace=True)
-# Change the representation for the climate and all columns to plot on a single figure
-quarterly_sum_all = quarterly.melt(id_vars=['datetime'],value_vars=['climate','kwd', 'title'])
+).reset_index()
+# Remove the first and last week that are incomplete
+weekly.drop([0,quarterly.shape[0] - 1], inplace=True)
+
+# Save the data to a csv
+weekly.to_csv("climate_data_weekly.csv", columns=['datetime', 'ratio', 'climate', 'kwd', 'title', 'all', 'members'])
+
+# # Change the representation for the climate and all columns to plot on a single figure
+# weekly_sum_all = quarterly.melt(id_vars=['datetime'],value_vars=['climate','kwd', 'title'])
+
 
 # # Create 2 subplots and plot climate, all on the first, ratio on the second
 # fig,axs=plt.subplots(ncols=2)
-# sns.lineplot(data=quarterly_sum_all, x='datetime', y='value', hue='variable',ax=axs[0])
-# sns.lineplot(data=quarterly, x='datetime', y='ratio',ax=axs[1])
+# sns.lineplot(data=weekly_sum_all, x='datetime', y='value', hue='variable',ax=axs[0])
+# sns.lineplot(data=weekly, x='datetime', y='ratio',ax=axs[1])
 
-sns.lineplot(data=quarterly_sum_all, x='datetime', y='value', hue='variable')
+# sns.lineplot(data=weekly_sum_all, x='datetime', y='value', hue='variable')
 
 # Do not forget to show the underlying matplotlib.pyplot buffer !!
-plt.show()
+# plt.show()
